@@ -12,7 +12,8 @@ from bot.handlers.admin_handlers.event_manager import router as add_event_router
 from bot.handlers.admin_handlers.role_manager import router as add_role_router
 from bot.handlers.delete_last_message import router as delete_last_message_router
 from bot.handlers.admin_handlers.user_manager import router as user_manager_router
-
+from bot.handlers.my_points import router as my_points_router
+from bot.handlers.get_points import router as get_points_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -28,6 +29,8 @@ async def main():
         add_role_router,
         delete_last_message_router,
         user_manager_router,
+        my_points_router,
+        get_points_router
     )
 
     await dp.start_polling(bot)

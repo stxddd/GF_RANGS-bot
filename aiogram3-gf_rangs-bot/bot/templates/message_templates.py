@@ -1,5 +1,5 @@
-welcome_message = 'Приветствие! ...'
-registation_message = 'Регистрация! ...'
+welcome_message = 'Дорогой активист ГФ, мы создали данный бот для упрощения работы с ранговой системой.'
+registation_message = 'Начнем с регистрации '
 already_register_message = "Ты уже зарегистрирован, выбери что хочешь сделать!"
 
 enter_fullname_message = 'Укажи свое ФИО'
@@ -71,3 +71,11 @@ ROLE_ADD_ERROR_MESSAGE = "❌ Ошибка при добавлении роли.
 USER_NOT_FOUND_MESSAGE = "❌ Пользователь не найден."
 USER_DELETE_ERROR_MESSAGE = "⚠ Ошибка при удалении пользователя."
 USER_DELETED_MESSAGE = "✅ Пользователь успешно удалён."
+
+def your_points_message(date, points, events_info):
+    if points == 0:
+        return 'У вас ещё нет баллов!'
+    answer = f"На {date} вы заработали баллов: {points}\n\n" 
+    for events_info_item in events_info:
+        answer += str(events_info_item) + '\n'
+    return  answer

@@ -1,12 +1,15 @@
 import re
+from datetime import datetime
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, BufferedInputFile
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
+from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 from utils.decorators.admin_required import admin_required
-
-from bot.db.events.dao import EventDAO, RoleDAO
+from bot.db.events.dao import EventDAO, RoleDAO, UserEventRoleDAO
 from bot.db.users.dao import UserDAO
 from bot.templates.message_templates import event_message
 from bot.templates.kb_templates import add_event_text, view_all_events_text,view_all_users_text
@@ -201,8 +204,58 @@ async def process_rename_event(message: Message, state: FSMContext):
 @admin_required
 async def get_data(message: Message):
     users = await UserDAO.find_all()
-    
+
+    user_points = []
     for user in users:
-        data = await UserDAO.get_user_events_and_total_points(user.id)
-        await message.answer(user.fullname + " - " +str(data["total_points"]) + " - " + str(data["event_ids"]))
-        
+        total_points = await UserDAO.get_total_points_by_user_id(user.id)
+        user_points.append((user.fullname, total_points))
+
+    user_points.sort(key=lambda x: x[1], reverse=True)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Баллы за мероприятия"
+
+    ws["A1"] = "ФИО"
+    ws["B1"] = "Баллов"
+
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+    alignment = Alignment(horizontal="center", vertical="center")
+    thin_border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin")
+    )
+
+    for col in ("A", "B"):
+        ws[f"{col}1"].font = header_font
+        ws[f"{col}1"].fill = header_fill
+        ws[f"{col}1"].alignment = alignment
+        ws[f"{col}1"].border = thin_border
+
+    row = 2
+    for fullname, points in user_points:
+        ws[f"A{row}"] = fullname
+        ws[f"B{row}"] = points
+
+        for col in ("A", "B"):
+            ws[f"{col}{row}"].alignment = alignment
+            ws[f"{col}{row}"].border = thin_border
+        row += 1
+
+    for column_cells in ws.columns:
+        length = max(len(str(cell.value)) if cell.value else 0 for cell in column_cells)
+        ws.column_dimensions[column_cells[0].column_letter].width = length + 2
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    timestamp = datetime.now().strftime("%d_%m_%Y_%H_%M")
+    filename = f"Итог_на_{timestamp}.xlsx"
+
+    await message.answer_document(
+        document=BufferedInputFile(output.getvalue(), filename)
+    )

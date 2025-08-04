@@ -13,7 +13,7 @@ from bot.templates.kb_templates import (
 )
 
 
-async def get_users_to_edit(visibility: bool, event_id: int, page: int = 1, per_page: int = 15):
+async def get_users_to_edit(visibility: bool, event_id: int, page: int = 1, per_page: int = 10):
     user_event_role = await UserEventRoleDAO.find_all(event_id=event_id)
     
     total_users = len(user_event_role)

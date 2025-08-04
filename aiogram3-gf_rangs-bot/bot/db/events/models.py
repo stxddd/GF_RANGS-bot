@@ -16,7 +16,7 @@ class Role(Base):
     id = Column(Integer, primary_key = True)
     event_id = Column(Integer, nullable = False)
     name = Column(String(150), nullable = False)
-    points= Column(Integer, nullable = False)
+    points = Column(Integer, nullable = False)
 
 
 class UserEventRole(Base):
@@ -26,4 +26,4 @@ class UserEventRole(Base):
     event_id = Column(Integer, nullable = False)
     user_id = Column(Integer, nullable = False)
     role_id = Column(Integer, nullable = False)
-    
+    media_path = Column(String, nullable = False)    
