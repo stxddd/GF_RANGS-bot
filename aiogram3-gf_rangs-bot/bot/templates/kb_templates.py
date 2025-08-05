@@ -5,7 +5,7 @@ get_conditions_text = "🪧 Условия"
 add_event_text = "+ МЕРО (ADMIN)"
 add_role_text = "+ РОЛЬ (ADMIN)"
 view_all_events_text = "ВСЁ МЕРО (ADMIN)"
-view_all_users_text = "ИТОГОВАЯ ТАБЛИЦА (ADMIN)"
+view_all_users_text = "ТАБЛИЦА (ADMIN)"
 
 yes_text = 'Да'
 no_text = 'Нет'

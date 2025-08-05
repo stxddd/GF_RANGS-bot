@@ -22,11 +22,14 @@ def main_menu_kb(tg_id):
     ]
     
     if check_admin_tg_id(tg_id):
-        keyboard.append([KeyboardButton(text=add_event_text)])
-        keyboard.append([KeyboardButton(text=add_role_text)])
-        keyboard.append([KeyboardButton(text=view_all_events_text)])
-        keyboard.append([KeyboardButton(text=view_all_users_text)])
-    
+        keyboard.append([
+            KeyboardButton(text=add_event_text),
+            KeyboardButton(text=add_role_text)
+        ])
+        keyboard.append([
+            KeyboardButton(text=view_all_events_text),
+            KeyboardButton(text=view_all_users_text)
+        ])
     return ReplyKeyboardMarkup(
         keyboard=keyboard,
         resize_keyboard=True,

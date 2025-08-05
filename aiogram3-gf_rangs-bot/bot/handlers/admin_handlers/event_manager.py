@@ -116,7 +116,7 @@ async def handle_get_event(callback: CallbackQuery):
     roles = await RoleDAO.find_all(event_id=current_event.id)
     await callback.message.answer(
         event_message(roles, current_event),
-        reply_markup=await get_users_to_edit(visibility=current_event.visibility, event_id=event_id),
+        reply_markup=await get_users_to_edit(event_id=event_id),
     )
 
 

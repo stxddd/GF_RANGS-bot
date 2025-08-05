@@ -21,6 +21,8 @@ from bot.templates.message_templates import (
     INVALID_ROLE_POINTS_MESSAGE,
     ROLE_ADDED_SUCCESS_MESSAGE,
     ROLE_ADD_ERROR_MESSAGE,
+    ROLE_DELETED_SUCCESS_MESSAGE,
+    ROLE_DELETE_ERROR_MESSAGE,
 )
 
 router = Router()
@@ -36,6 +38,10 @@ class EditRoleState(StatesGroup):
     waiting_for_points = State()
 
 EDIT_ROLE_PATTERN = r"^edit_role:(\d+)$"
+DELETE_ROLE_PATTERN = r"^delete_role:(\d+)$"
+CONFIRM_DELETE_PATTERN = r"^confirm_delete_role:(\d+)$"
+CANCEL_DELETE_PATTERN = r"^cancel_delete_role:(\d+)$"
+EDIT_ROLES_PATTERN = r"^edit_roles:(\d+)$"
 
 @router.message(F.text == add_role_text)
 @admin_required
@@ -107,8 +113,6 @@ async def add_role_points(message: Message, state: FSMContext):
     await state.clear()
 
 
-EDIT_ROLES_PATTERN = r"^edit_roles:(\d+)$"
-
 @router.callback_query(F.data.regexp(EDIT_ROLES_PATTERN))
 @admin_required
 async def handle_edit_roles(callback: CallbackQuery, state: FSMContext):
@@ -126,6 +130,10 @@ async def handle_edit_roles(callback: CallbackQuery, state: FSMContext):
             InlineKeyboardButton(
                 text=f"{role.name} (Баллы: {role.points})",
                 callback_data=f"edit_role:{role.id}"
+            ),
+            InlineKeyboardButton(
+                text="Удалить",
+                callback_data=f"delete_role:{role.id}"
             )
         )
     keyboard.row(
@@ -134,7 +142,7 @@ async def handle_edit_roles(callback: CallbackQuery, state: FSMContext):
             callback_data="delete_last_message"
         )
     )
-    await callback.message.answer("Выберите роль для редактирования:", reply_markup=keyboard.as_markup())
+    await callback.message.answer("Выберите роль для редактирования или удаления:", reply_markup=keyboard.as_markup())
 
 
 @router.callback_query(F.data.regexp(EDIT_ROLE_PATTERN))
@@ -153,6 +161,61 @@ async def handle_edit_role(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer(f"Текущее название роли: {role.name}\nВведите новое название (или оставьте как есть):")
 
 
+@router.callback_query(F.data.regexp(DELETE_ROLE_PATTERN))
+@admin_required
+async def handle_delete_role(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    match = re.match(DELETE_ROLE_PATTERN, callback.data)
+    role_id = int(match.group(1))
+
+    role = await RoleDAO.find_by_id(role_id)
+    if not role:
+        return await callback.message.answer("Роль не найдена.")
+
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(
+        InlineKeyboardButton(
+            text="Да",
+            callback_data=f"confirm_delete_role:{role_id}"
+        ),
+        InlineKeyboardButton(
+            text="Нет",
+            callback_data=f"cancel_delete_role:{role_id}"
+        )
+    )
+    await callback.message.answer(
+        f"Вы уверены, что хотите удалить роль '{role.name}' (ID: {role_id})?",
+        reply_markup=keyboard.as_markup()
+    )
+
+
+@router.callback_query(F.data.regexp(CONFIRM_DELETE_PATTERN))
+@admin_required
+async def confirm_delete_role(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    match = re.match(CONFIRM_DELETE_PATTERN, callback.data)
+    role_id = int(match.group(1))
+
+    role = await RoleDAO.find_by_id(role_id)
+    if not role:
+        return await callback.message.answer("Роль не найдена.")
+
+    deleted = await RoleDAO.delete(id=role_id)
+    if deleted:
+        await callback.message.answer(
+            ROLE_DELETED_SUCCESS_MESSAGE.format(name=role.name, role_id=role_id)
+        )
+    else:
+        await callback.message.answer(ROLE_DELETE_ERROR_MESSAGE)
+
+
+@router.callback_query(F.data.regexp(CANCEL_DELETE_PATTERN))
+@admin_required
+async def cancel_delete_role(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await callback.message.answer("Удаление роли отменено.")
+
+
 @router.message(EditRoleState.waiting_for_name)
 @admin_required
 async def process_role_name(message: Message, state: FSMContext):
@@ -160,13 +223,13 @@ async def process_role_name(message: Message, state: FSMContext):
     data = await state.get_data()
     role_id = data.get("role_id")
 
-    # Сохраняем новое имя, если оно не пустое, иначе оставляем старое
     if not new_name:
         return await message.answer("Название роли не может быть пустым. Введите заново:")
 
     await state.update_data(new_name=new_name)
     await state.set_state(EditRoleState.waiting_for_points)
     await message.answer("Введите новое количество баллов для роли:")
+
 
 @router.message(EditRoleState.waiting_for_points)
 @admin_required

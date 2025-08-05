@@ -40,7 +40,7 @@ async def get_events_for_edit(events, tg_id, page: int = 1, per_page: int = 10):
                 callback_data=f"edit_page_{page - 1}",
             )
         )
-    if total_pages != 1:
+    if total_pages not in [0,1] :
         nav_buttons.append(
             InlineKeyboardButton(
                 text=f'{page}/{total_pages}',
@@ -136,7 +136,7 @@ async def get_events_kb(events, tg_id, page: int = 1, per_page: int = 10):
                 callback_data=f"edit_event_page_{page - 1}",
             )
         )
-    if total_pages != 1:
+    if total_pages not in [0,1]:
         nav_buttons.append(
             InlineKeyboardButton(
                 text=f'{page}/{total_pages}',

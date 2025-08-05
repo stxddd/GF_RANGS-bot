@@ -1,6 +1,8 @@
+import os
 import re
+
 from aiogram import F, Router
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, FSInputFile
 from aiogram.fsm.context import FSMContext
 
 from bot.kb.users_kb import delete_user_kb, get_users_to_edit, yes_or_not_delete_user_role_event_keyboard
@@ -44,10 +46,8 @@ async def handle_pagination(callback: CallbackQuery):
         reply_markup=await get_users_to_edit(event_id=event_id, page=page)
     )
 
-
 @router.callback_query(F.data.regexp(GET_USER_TO_EDIT_PATTERN))
-async def handle_get_connection_to_edit(callback: CallbackQuery):
-    """Открытие информации о пользователе"""
+async def handle_get_users_to_edit(callback: CallbackQuery):
     await callback.answer()
 
     match = re.match(GET_USER_TO_EDIT_PATTERN, callback.data)
@@ -60,14 +60,34 @@ async def handle_get_connection_to_edit(callback: CallbackQuery):
     user, role, event = await get_user_event_role_data(user_event_role)
 
     await callback.message.answer(
-        user_info_message(user=user, role=role, event=event),
+        user_info_message(
+            user=user,
+            role=role,
+            event=event,
+        ),
         reply_markup=delete_user_kb(user_event_role_id)
     )
+
+    media_path = user_event_role.media_path
+    if not(os.path.exists(media_path)):
+        await callback.message.answer(f"🔗 Ссылка: {media_path}")
+    else:
+        try:
+            ext = media_path.split(".")[-1].lower()
+            file = FSInputFile(media_path)
+            if ext in ["jpg", "jpeg", "png"]:
+                await callback.message.answer_photo(file)
+            elif ext in ["mp4", "mov"]:
+                await callback.message.answer_video(file)
+            else:
+                await callback.message.answer_document(file)
+        except:
+            await callback.message.answer("⚠️ Медиафайл не найден.")
 
 
 @router.callback_query(F.data.regexp(PREPARE_TO_DELETE_USER_PATTERN))
 @admin_required
-async def handle_prepare_to_delete_client(callback: CallbackQuery, state: FSMContext):
+async def handle_prepare_to_delete_user(callback: CallbackQuery, state: FSMContext):
     """Подтверждение удаления пользователя"""
     await callback.answer()
 
@@ -90,7 +110,7 @@ async def handle_prepare_to_delete_client(callback: CallbackQuery, state: FSMCon
 
 @router.callback_query(F.data.regexp(DELETE_USER_PATTERN))
 @admin_required
-async def handle_delete_client(callback: CallbackQuery):
+async def handle_delete_user(callback: CallbackQuery):
     """Удаление пользователя"""
     await callback.answer()
 

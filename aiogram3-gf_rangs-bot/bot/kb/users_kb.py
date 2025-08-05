@@ -2,7 +2,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot.db.users.dao import UserDAO
-from bot.db.events.dao import UserEventRoleDAO, RoleDAO
+from bot.db.events.dao import EventDAO, UserEventRoleDAO, RoleDAO
 from bot.templates.kb_templates import (
     yes_text,
     no_text,
@@ -13,7 +13,7 @@ from bot.templates.kb_templates import (
 )
 
 
-async def get_users_to_edit(visibility: bool, event_id: int, page: int = 1, per_page: int = 10):
+async def get_users_to_edit(event_id: int, page: int = 1, per_page: int = 10):
     user_event_role = await UserEventRoleDAO.find_all(event_id=event_id)
     
     total_users = len(user_event_role)
@@ -43,7 +43,7 @@ async def get_users_to_edit(visibility: bool, event_id: int, page: int = 1, per_
                 callback_data=f"edit_user_page_{event_id}_{page - 1}",
             )
         )
-    if total_pages != 1:
+    if total_pages not in [0,1]:
         nav_buttons.append(
             InlineKeyboardButton(
                 text=f'{page}/{total_pages}',
@@ -62,10 +62,10 @@ async def get_users_to_edit(visibility: bool, event_id: int, page: int = 1, per_
     if nav_buttons:
         keyboard.row(*nav_buttons)
 
-    
+    event = await EventDAO.find_by_id(event_id)
     keyboard.row(
         InlineKeyboardButton(
-            text=f"Сделать {'невидимым' if visibility else 'видимым'}",
+            text=f"Сделать {'невидимым' if event.visibility else 'видимым'}",
             callback_data=f"toggle_visibility:{event_id}"
         )
     )
@@ -81,6 +81,13 @@ async def get_users_to_edit(visibility: bool, event_id: int, page: int = 1, per_
             callback_data=f"edit_roles:{event_id}"
         )
     )
+    keyboard.row(
+        InlineKeyboardButton(
+            text=delete_text,
+            callback_data=f"prepare_to_delete_event_{event_id}",
+        )
+    )
+
     keyboard.row(
         InlineKeyboardButton(
             text=cancel_text,

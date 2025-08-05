@@ -33,7 +33,7 @@ async def cmd_start(message: Message, state: FSMContext):
     user = await UserDAO.find_one_or_none(tg_id=message.from_user.id)
     
     if user:
-        return await message.answer(already_register_message, reply_markup= main_menu_kb(user.tg_id))
+        return await message.answer(welcome_message, reply_markup= main_menu_kb(user.tg_id), parse_mode='Markdown')
     
     await message.answer(welcome_message)
     await message.answer(registation_message)

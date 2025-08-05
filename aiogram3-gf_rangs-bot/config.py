@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_DB: str
     POSTGRES_PASSWORD: str
+    
+    MEDIA_DIR: str
+    MAX_FILE_SIZE: int
         
     @property
     def DATABASE_URL(self) -> str:
