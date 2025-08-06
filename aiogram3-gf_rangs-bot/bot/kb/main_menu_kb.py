@@ -1,4 +1,4 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 from bot.templates.kb_templates import (
     my_point_text,
@@ -7,8 +7,8 @@ from bot.templates.kb_templates import (
     add_event_text,
     add_role_text,
     view_all_events_text,
-    view_all_users_text
-
+    view_all_users_text,
+    edit_profile_text
 )
 from utils.check_admin_tg_id import check_admin_tg_id
 
@@ -19,6 +19,7 @@ def main_menu_kb(tg_id):
         [KeyboardButton(text=my_point_text)],
         [KeyboardButton(text=get_points_text)],
         [KeyboardButton(text=get_conditions_text)],
+        [KeyboardButton(text=edit_profile_text)],
     ]
     
     if check_admin_tg_id(tg_id):

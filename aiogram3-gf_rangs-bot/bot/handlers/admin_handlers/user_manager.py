@@ -26,7 +26,6 @@ DELETE_USER_PATTERN = r"^delete_user_role_event_(\d+)$"
 
 
 async def get_user_event_role_data(user_event_role):
-    """Получение user, role, event по user_event_role"""
     user = await UserDAO.find_by_id(user_event_role.user_id)
     role = await RoleDAO.find_by_id(user_event_role.role_id)
     event = await EventDAO.find_by_id(user_event_role.event_id)
@@ -35,7 +34,6 @@ async def get_user_event_role_data(user_event_role):
 
 @router.callback_query(F.data.regexp(EDIT_USER_PAGE_PATTERN))
 async def handle_pagination(callback: CallbackQuery):
-    """Обработка пагинации"""
     await callback.answer()
 
     match = re.match(EDIT_USER_PAGE_PATTERN, callback.data)

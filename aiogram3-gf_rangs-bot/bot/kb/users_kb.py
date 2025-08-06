@@ -130,3 +130,10 @@ def yes_or_not_delete_user_role_event_keyboard(user_role_event_id: int):
         ]
     )
 
+def edit_profile_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Изменить имя", callback_data="edit_fullname")],
+        [InlineKeyboardButton(text="Изменить номер курса", callback_data="edit_course")],
+        [InlineKeyboardButton(text="Изменить номер группы", callback_data="edit_group")],
+        [InlineKeyboardButton(text="✅ Сохранить изменения", callback_data="save_changes")]
+    ])

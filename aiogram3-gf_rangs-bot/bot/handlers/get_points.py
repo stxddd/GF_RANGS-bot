@@ -1,14 +1,20 @@
-import asyncio
 import os
+import random
 import aiofiles
 from aiogram import Router, F
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
-from utils.decorators.admin_required import admin_required
 from bot.templates.kb_templates import get_points_text
+from bot.templates.message_templates import (
+    enter_event_message,
+    enter_role_message,
+    you_need_to_register_message,
+    enter_media_message,
+    participation_added_message
+)
 from bot.db.users.dao import UserDAO
-from bot.db.events.dao import UserEventRoleDAO, EventDAO
+from bot.db.events.dao import RoleDAO, UserEventRoleDAO, EventDAO
 from bot.kb.events_kb import get_events_kb, role_kb
 from config import settings
 from bot.kb.main_menu_kb import main_menu_kb
@@ -23,19 +29,18 @@ class RegistrationFSM(StatesGroup):
     role = State()
     media = State()
 
-
 processed_media_groups = set()
-
 
 @router.message(F.text == get_points_text)
 async def start_add_role(message: Message):
     user = await UserDAO.find_one_or_none(tg_id=message.from_user.id)
-    if not user:
-        return await message.answer("Вы не зарегистрированы!")
+    if not user or not(user.is_approved):
+        return await message.answer(you_need_to_register_message)
     events = await EventDAO.find_all(visibility=True)
-    await message.answer(
-        "🔹 Выберите мероприятие",
-        reply_markup=await get_events_kb(events=events, tg_id=message.from_user.id)
+    kb = await get_events_kb(events=events, tg_id=message.from_user.id) if len(events) > 0 else None
+    return await message.answer(
+        enter_event_message(len(events)),
+        reply_markup=kb
     )
 
 
@@ -50,9 +55,12 @@ async def change_events_page(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("get_event:"))
 async def choose_event(callback: CallbackQuery, state: FSMContext):
     event_id = int(callback.data.split(":")[1])
+    roles = await RoleDAO.find_all(event_id=event_id)
+        
+    kb = await role_kb(roles) if len(roles) > 0 else None
     await state.update_data(event_id=event_id)
     await state.set_state(RegistrationFSM.role)
-    await callback.message.edit_text("🔹 Выберите роль", reply_markup=await role_kb(event_id))
+    await callback.message.edit_text(enter_role_message(len(roles)), reply_markup=kb)
 
 
 @router.callback_query(F.data.startswith("role:"))
@@ -60,10 +68,7 @@ async def choose_role(callback: CallbackQuery, state: FSMContext):
     role_id = callback.data.split(":")[1]
     await state.update_data(role_id=role_id)
     await state.set_state(RegistrationFSM.media)
-    await callback.message.edit_text(
-        "🔹 Пришли своё фото с мероприятия. 1 фото (до 20 МБ)\n\nЕсли ты 'медиа' - отправь ссылку на свою работу!"
-    )
-
+    await callback.message.edit_text(enter_media_message)
 
 @router.message(RegistrationFSM.media)
 async def get_media_or_link(message: Message, state: FSMContext):
@@ -71,7 +76,7 @@ async def get_media_or_link(message: Message, state: FSMContext):
     user = await UserDAO.find_one_or_none(tg_id=message.from_user.id)
 
     if not user:
-        await message.answer("❌ Пользователь не найден.")
+        await message.answer(you_need_to_register_message)
         return
 
     if message.media_group_id and message.media_group_id in processed_media_groups:
@@ -86,15 +91,9 @@ async def get_media_or_link(message: Message, state: FSMContext):
         if message.media_group_id:
             processed_media_groups.add(message.media_group_id)
 
-        new_record = await UserEventRoleDAO.add(
-            event_id=int(data["event_id"]),
-            user_id=user.id,
-            role_id=int(data["role_id"]),
-            media_path=""
-        )
-
         media_path = ""
 
+        # Проверка текста или файла
         if message.text:
             media_path = message.text
         else:
@@ -104,15 +103,15 @@ async def get_media_or_link(message: Message, state: FSMContext):
             )
 
             if not file_id:
-                await message.answer("Пожалуйста, отправьте ссылку или медиафайл (фото или видео).")
-                await UserEventRoleDAO.delete(new_record.id)
+                await message.answer("Пожалуйста, отправь ссылку или медиафайл.")
+                await state.update_data(registration_in_progress=False)
                 return
 
             file = await message.bot.get_file(file_id)
 
             if file.file_size > settings.MAX_FILE_SIZE:
                 await message.answer("❌ Файл слишком большой. Максимальный размер: 20 МБ.")
-                await UserEventRoleDAO.delete(new_record.id)
+                await state.update_data(registration_in_progress=False)
                 return
 
             ext = (
@@ -121,7 +120,7 @@ async def get_media_or_link(message: Message, state: FSMContext):
                 (message.document.file_name.split(".")[-1] if message.document else "bin")
             )
 
-            file_path = os.path.join(media_dir, f"{new_record.id}_media.{ext}")
+            file_path = os.path.join(media_dir, f"{user.id}_{data['event_id']}_{random.randint(1000,9999)}_media.{ext}")
             os.makedirs(media_dir, exist_ok=True)
 
             file_bytes = await message.bot.download_file(file.file_path)
@@ -130,10 +129,17 @@ async def get_media_or_link(message: Message, state: FSMContext):
 
             media_path = file_path
 
-        await UserEventRoleDAO.update(new_record.id, media_path=media_path)
-        await message.answer("✅ Регистрация завершена!", reply_markup=main_menu_kb(message.from_user.id))
+        # Создаём запись только после проверки медиа
+        new_record = await UserEventRoleDAO.add(
+            event_id=int(data["event_id"]),
+            user_id=user.id,
+            role_id=int(data["role_id"]),
+            media_path=media_path
+        )
+
+        await message.answer(participation_added_message, reply_markup=main_menu_kb(message.from_user.id))
+        await state.clear()
 
     finally:
-        await state.clear()
         if message.media_group_id:
             processed_media_groups.discard(message.media_group_id)

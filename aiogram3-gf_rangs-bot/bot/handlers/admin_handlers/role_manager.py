@@ -142,7 +142,7 @@ async def handle_edit_roles(callback: CallbackQuery, state: FSMContext):
             callback_data="delete_last_message"
         )
     )
-    await callback.message.answer("Выберите роль для редактирования или удаления:", reply_markup=keyboard.as_markup())
+    await callback.message.answer("Выбери роль для редактирования или удаления:", reply_markup=keyboard.as_markup())
 
 
 @router.callback_query(F.data.regexp(EDIT_ROLE_PATTERN))
@@ -158,7 +158,7 @@ async def handle_edit_role(callback: CallbackQuery, state: FSMContext):
 
     await state.update_data(role_id=role_id)
     await state.set_state(EditRoleState.waiting_for_name)
-    await callback.message.answer(f"Текущее название роли: {role.name}\nВведите новое название (или оставьте как есть):")
+    await callback.message.answer(f"Текущее название роли: {role.name}\nВведи новое название (или оставьте как есть):")
 
 
 @router.callback_query(F.data.regexp(DELETE_ROLE_PATTERN))
@@ -184,7 +184,7 @@ async def handle_delete_role(callback: CallbackQuery, state: FSMContext):
         )
     )
     await callback.message.answer(
-        f"Вы уверены, что хотите удалить роль '{role.name}' (ID: {role_id})?",
+        f"Ты уверен(а), что хочешь удалить роль '{role.name}' (ID: {role_id})?",
         reply_markup=keyboard.as_markup()
     )
 
@@ -228,7 +228,7 @@ async def process_role_name(message: Message, state: FSMContext):
 
     await state.update_data(new_name=new_name)
     await state.set_state(EditRoleState.waiting_for_points)
-    await message.answer("Введите новое количество баллов для роли:")
+    await message.answer("Введи новое количество баллов для роли:")
 
 
 @router.message(EditRoleState.waiting_for_points)
@@ -237,7 +237,7 @@ async def process_role_points(message: Message, state: FSMContext):
     try:
         new_points = int(message.text.strip())
     except ValueError:
-        return await message.answer("Баллы должны быть числом. Введите заново:")
+        return await message.answer("Баллы должны быть числом. Введи заново:")
 
     data = await state.get_data()
     role_id = data.get("role_id")

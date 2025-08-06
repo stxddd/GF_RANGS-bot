@@ -8,6 +8,7 @@ from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
+from utils.calculate_rank import get_rank_and_remaining
 from utils.decorators.admin_required import admin_required
 from bot.db.events.dao import EventDAO, RoleDAO, UserEventRoleDAO
 from bot.db.users.dao import UserDAO
@@ -205,19 +206,22 @@ async def process_rename_event(message: Message, state: FSMContext):
 async def get_data(message: Message):
     users = await UserDAO.find_all()
 
-    user_points = []
+    user_data = []
     for user in users:
         total_points = await UserDAO.get_total_points_by_user_id(user.id)
-        user_points.append((user.fullname, total_points))
+        rank = await get_rank_and_remaining(user.id)
+        user_data.append((user.fullname, total_points, rank[0]))
 
-    user_points.sort(key=lambda x: x[1], reverse=True)
+    # Сортировка по количеству баллов
+    user_data.sort(key=lambda x: x[1], reverse=True)
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "Баллы за мероприятия"
+    ws.title = "Баллы и ранги"
 
     ws["A1"] = "ФИО"
     ws["B1"] = "Баллов"
+    ws["C1"] = "Ранг"
 
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
@@ -229,25 +233,31 @@ async def get_data(message: Message):
         bottom=Side(style="thin")
     )
 
-    for col in ("A", "B"):
+    # Форматирование заголовков
+    for col in ("A", "B", "C"):
         ws[f"{col}1"].font = header_font
         ws[f"{col}1"].fill = header_fill
         ws[f"{col}1"].alignment = alignment
         ws[f"{col}1"].border = thin_border
 
+    # Заполнение данных
     row = 2
-    for fullname, points in user_points:
+    for fullname, points, rank in user_data:
         ws[f"A{row}"] = fullname
         ws[f"B{row}"] = points
+        ws[f"C{row}"] = rank
 
-        for col in ("A", "B"):
+        for col in ("A", "B", "C"):
             ws[f"{col}{row}"].alignment = alignment
             ws[f"{col}{row}"].border = thin_border
         row += 1
 
     for column_cells in ws.columns:
         length = max(len(str(cell.value)) if cell.value else 0 for cell in column_cells)
-        ws.column_dimensions[column_cells[0].column_letter].width = length + 2
+        if column_cells[0].column_letter == "A":
+            ws.column_dimensions["A"].width = length + 5
+        else:
+            ws.column_dimensions[column_cells[0].column_letter].width = length + 2
 
     output = BytesIO()
     wb.save(output)

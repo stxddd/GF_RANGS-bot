@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from bot.db.events.dao import RoleDAO, UserEventRoleDAO
+from bot.db.events.dao import UserEventRoleDAO
 from bot.templates.kb_templates import (
     cancel_text,
     delete_text,
@@ -102,13 +102,7 @@ def yes_or_not_delete_event_keyboard(event_id: int):
         ]
     )
 
-def category_kb():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Культ-масс", callback_data="category:cult")],
-        [InlineKeyboardButton(text="Медиа", callback_data="category:media")]
-    ])
     
-
 async def get_events_kb(events, tg_id, page: int = 1, per_page: int = 10):
     total_events = len(events)
     total_pages = (total_events + per_page - 1) // per_page
@@ -165,9 +159,7 @@ async def get_events_kb(events, tg_id, page: int = 1, per_page: int = 10):
     
     return keyboard.as_markup()
 
-async def role_kb(event_id):
-    roles = await RoleDAO.find_all(event_id=event_id)
-    
+async def role_kb(roles):
     keyboard = InlineKeyboardBuilder()
     
     for role in roles:

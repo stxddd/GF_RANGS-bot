@@ -15,6 +15,7 @@ from bot.handlers.admin_handlers.user_manager import router as user_manager_rout
 from bot.handlers.my_points import router as my_points_router
 from bot.handlers.get_points import router as get_points_router
 from bot.handlers.condition import router as condition_router
+from bot.handlers.edit_profile import router as edit_profile_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -32,7 +33,8 @@ async def main():
         user_manager_router,
         my_points_router,
         get_points_router,
-        condition_router
+        condition_router,
+        edit_profile_router
     )
 
     await dp.start_polling(bot)
