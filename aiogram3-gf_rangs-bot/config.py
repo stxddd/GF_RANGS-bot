@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     
     MEDIA_DIR: str
     MAX_FILE_SIZE: int
+    
+    HOUR_TO_RECEIVE_NOTIFICATIONS: int
+    MINUTE_TO_RECEIVE_NOTIFICATIONS: int
         
     @property
     def DATABASE_URL(self) -> str:
